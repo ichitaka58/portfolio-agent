@@ -14,7 +14,7 @@ import {
 import { createPinoLogger } from "@voltagent/logger";
 import { honoServer } from "@voltagent/server-hono";
 import { expenseApprovalWorkflow } from "./workflows";
-import { weatherTool, getQiitaUserInfo, getQiitaUserItems } from "./tools";
+import { weatherTool, getQiitaUserInfo, getQiitaUserItems, getGithubUserInfo, getGithubRepos } from "./tools";
 
 // Create a logger instance
 // const logger = createPinoLogger({
@@ -42,16 +42,26 @@ import { weatherTool, getQiitaUserInfo, getQiitaUserItems } from "./tools";
 const qiitaAgent = new Agent({
   name: "qiita-agent",
   instructions:
-    "ユーザーからQiitaユーザーIDを受け取ったら、ユーザーの情報と投稿記事一覧を取得してください。",
+    `ユーザーからQiitaユーザーIDを受け取ったら、ユーザーの情報と投稿記事一覧を取得してください。`,
   model: "google/gemini-2.5-flash",
   tools: [getQiitaUserInfo, getQiitaUserItems],
 });
 
+const githubAgent = new Agent({
+  name: "github-agent",
+  instructions: `GitHubのユーザー名を指定して、GitHubのユーザー情報と公開リポジトリ情報を取得してください。`,
+  model: "google/gemini-2.5-flash",
+  tools: [getGithubUserInfo, getGithubRepos],
+});
+
 const mainAgent = new Agent({
-  name: "main-agant",
-  instructions:
-    "ユーザーから「QiitaユーザーID」を受け取ったら、「QiitaユーザーID」を渡して情報をJSONで取得し、Qiitaのユーザー情報と投稿記事一覧をまとめて返してください。",
-  subAgents: [qiitaAgent],
+  name: "main-agent",
+  instructions:`
+  「QiitaユーザーID」を受け取ったら、「QiitaユーザーID」を渡して情報をJSONで取得し、Qiitaのユーザー情報と投稿記事一覧を取得します。
+  「GitHubユーザー名」を受け取ったら、「GitHubユーザー名」を渡して情報をJSONで取得し、GitHubのユーザー情報と公開リポジトリ情報を取得します。
+  それらの情報をまとめて返してください。
+  `,
+  subAgents: [qiitaAgent, githubAgent],
   model: "google/gemini-2.5-flash",
 });
 
